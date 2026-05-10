@@ -32,10 +32,19 @@ void init_idt(void) {
     outb(0x21, 0x20); outb(0xA1, 0x28);
     outb(0x21, 0x04); outb(0xA1, 0x02);
     outb(0x21, 0x01); outb(0xA1, 0x01);
-    outb(0x21, 0xFD);  outb(0xA1, 0xFF);
+    // Link the new assembly stub we just made
+    extern void timer_handler_stub(void);
 
-    /* Hook our keyboard stub to interrupt number 33 */
+    /* Mask interrupts EXCEPT Timer (IRQ 0) and Keyboard (IRQ 1) */
+    // 0xFC in binary is 11111100 (Bits 0 and 1 are unmasked!)
+    outb(0x21, 0xFC); outb(0xA1, 0xFF);
+
+    /* Hook our timer stub to interrupt 32 */
+    idt_set_gate(32, (uint32_t)timer_handler_stub, 0x08, 0x8E);
+    /* Hook our keyboard stub to interrupt 33 */
     idt_set_gate(33, (uint32_t)keyboard_handler_stub, 0x08, 0x8E);
+
+    
 
     // Tell the CPU where to find the IDT
     idt_flush((uint32_t)&idt_ptr);

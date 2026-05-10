@@ -3,26 +3,52 @@
 #include <stdint.h>
 #include "gdt.h"
 #include "idt.h"
+#include "timer.h"
+#include "process.h"
 
-// Access the functions we built in keyboard.c
 extern void print_string(const char* str);
 extern void clear_screen(void);
+
+// --- OUR FIRST BACKGROUND PROCESS ---
+void task_a() {
+    while(1) {
+        print_string("A");
+        // A small delay so it doesn't flood the screen instantly
+        for(volatile int i=0; i<1000000; i++); 
+    }
+}
+
+// --- OUR SECOND BACKGROUND PROCESS ---
+void task_b() {
+    while(1) {
+        print_string("B");
+        // A small delay
+        for(volatile int i=0; i<1000000; i++); 
+    }
+}
 
 void kernel_main(void) {
     init_gdt();
     init_idt();
     
-    // Setup the initial screen
     clear_screen();
-    print_string("Welcome to OSJamil Terminal!\n");
-    print_string("Type 'help' to see available commands.\n\n");
-    print_string("OSJamil> ");
+    print_string("OSJamil Kernel Booting...\n");
+    print_string("Starting Multitasking Scheduler...\n\n");
 
-    /* Enable hardware interrupts so the keyboard can work */
+    init_process_manager(); 
+    
+    // Create our two background tasks!
+    create_process(task_a);
+    create_process(task_b);
+
+    // Turn on the CPU Interrupts
     asm volatile("sti");
 
-    /* Trap the CPU here so it listens for the keyboard */
+    // Start the heartbeat! The CPU will now begin ripping control 
+    // away from the idle loop and switching between Task A and Task B!
+    init_timer(100); 
+
     while(1) {
-        // The OS runs strictly on interrupts now
+        // The main kernel idles here forever while the background tasks run.
     }
 }
